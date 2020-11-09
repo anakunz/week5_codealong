@@ -87,11 +87,97 @@ t.test(chinstrap_m, chinstrap_f, alternative = "greater")
 # must be lined up; this says are males greater than female? instead of the other way around
 ```
 
+# Part 2. One- way ANOVA and Beeswarm graph
+
+## Data Exploration
+
+1. table of counts by penguin species and sex
+
+```{r}
+penguin_count <- penguins %>% 
+  count(species, sex)
+#have to call it to get it to show up
+penguin_count
+
+```
 
 
+create a subset of only female penguins
+
+```{r}
+penguin_f <- penguins %>% 
+  filter(sex == "female")
+
+#Hist
+
+ggplot(penguin_f, aes(x = flipper_length_mm))+
+  geom_histogram(aes(fill = species))+
+  facet_wrap(~species, scales = "free") #each facet can have different scales
+
+#QQ
+
+ggplot(penguin_f, aes(sample = flipper_length_mm))+
+  geom_qq(aes(color = species))+
+  facet_wrap(~species, scales = "free")
+
+#could fill by species or facet wrap or both
+
+#Summary stats
+
+penguin_stats <- penguin_f %>% 
+  group_by(species) %>% 
+  summarize(
+    mean_flipper_length = mean(flipper_length_mm),
+    sd_flipper_length = sd(flipper_length_mm),
+    sample_size = n(),
+    se_flipper_length = sd(flipper_length_mm)/sqrt(n()),
+    var_flipper_length = var(flipper_length_mm)
+  )
+
+leveneTest(flipper_length_mm ~ species, data = penguin_f)#var of flip length as a funct of sp
+```
+
+## Bee swarm plot and a mean + or - a std dev
+
+```{r}
+ggplot()+
+  geom_beeswarm(data = penguin_f, 
+                aes(x = species, y = flipper_length_mm),
+                color = "grey70",
+                size = 3,
+                alpha = 0.5) +
+  geom_point(data = penguin_stats,
+             aes(x = species, y = mean_flipper_length),
+             size = 4)+
+  geom_errorbar(data = penguin_stats,
+                aes(x = species,
+                  ymax = mean_flipper_length + sd_flipper_length,
+                    ymin = mean_flipper_length - sd_flipper_length),
+                width = 0.1) + 
+  theme_light()
+```
+
+## One Way Anova
+
+```{r}
+penguin_aov <- aov(flipper_length_mm ~ species, data = penguin_f)
+summary(penguin_aov)
 
 
+#Post hoc test
 
+TukeyHSD(penguin_aov)
 
+```
 
+for unbalanced design
+type 3 anova with car package
+
+```{r}
+penguin_lm <- lm(flipper_length_mm ~species, data = penguin_f)
+penguin_aovt3 <- Anova(penguin_lm, type = "III")
+penguin_aovt3
+```
+
+unless crazy unbalanced then they will be pretty close.
 
